@@ -1,0 +1,116 @@
+cabal-version:   3.0
+name:            datastar-hs
+version:         0.1.0.0
+synopsis:        Haskell bindings for Datastar
+license:         MIT
+license-file:    LICENSE
+author:          Carlo Hamalainen
+maintainer:      carlo@carlo-hamalainen.net
+category:        Web, Hypermedia
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
+library
+  exposed-modules: 
+    Hypermedia.Datastar
+    Hypermedia.Datastar.ExecuteScript
+    Hypermedia.Datastar.Logger
+    Hypermedia.Datastar.PatchElements
+    Hypermedia.Datastar.PatchSignals 
+    Hypermedia.Datastar.Types
+    Hypermedia.Datastar.WAI 
+  hs-source-dirs:  src
+  default-language: Haskell2010
+  default-extensions:
+    ImportQualifiedPost
+    OverloadedStrings
+    TemplateHaskell
+  build-depends:
+    , base >= 4.7
+    , aeson
+    , bytestring
+    , case-insensitive
+    , http-types
+    , lens
+    , text
+    , wai
+  ghc-options: -threaded
+
+executable hello-world
+  main-is:          hello-world.hs
+  hs-source-dirs:   examples
+  default-language:  Haskell2010
+  default-extensions:
+    ImportQualifiedPost
+    OverloadedStrings
+  build-depends:
+    , base >= 4.7
+    , aeson
+    , bytestring
+    , http-types
+    , text
+    , wai
+    , warp
+    , datastar-hs
+  ghc-options: -threaded
+
+executable hello-world-channel
+  main-is:          hello-world-channel.hs
+  hs-source-dirs:   examples
+  default-language:  Haskell2010
+  default-extensions:
+    ImportQualifiedPost
+    OverloadedStrings
+  build-depends:
+    , base >= 4.7
+    , aeson
+    , bytestring
+    , http-types
+    , stm
+    , text
+    , wai
+    , warp
+    , datastar-hs
+  ghc-options: -threaded
+
+executable activity-feed
+  main-is:          activity-feed.hs
+  hs-source-dirs:   examples
+  default-language:  Haskell2010
+  default-extensions:
+    ImportQualifiedPost
+    OverloadedStrings
+  build-depends:
+    , base >= 4.7
+    , aeson
+    , bytestring
+    , lens
+    , text
+    , time
+    , http-types
+    , wai
+    , warp
+    , datastar-hs
+  ghc-options: -threaded
+
+executable heap-view
+  main-is:          heap-view.hs
+  hs-source-dirs:   examples
+  default-language:  Haskell2010
+  default-extensions:
+    ImportQualifiedPost
+    OverloadedStrings
+    ScopedTypeVariables
+  build-depends:
+    , base >= 4.7
+    , bytestring
+    , containers
+    , ghc-heap
+    , http-types
+    , stm
+    , text
+    , wai
+    , warp
+    , datastar-hs
+  ghc-options: -threaded -O0
+

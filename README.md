@@ -1,2 +1,101 @@
-# datastar-hs
-Datastar Haskell SDK
+# Datastar Haskell SDK
+
+A Haskell implementation of the [Datastar](https://data-star.dev/) SDK for building real-time hypermedia applications with server-sent events (SSE).
+
+## Design
+
+The SDK is built on [WAI](https://github.com/yesodweb/wai) (Web Application Interface), Haskell's standard interface for HTTP servers. This means it works with any WAI-compatible server (Warp, etc.) and any framework built on WAI (Yesod, Scotty, Servant, etc.) without framework-specific adapters.
+
+Key design decisions:
+
+- **Lens-based** -- I like optics, and I recommend Chris Penner's [Optics By Example](https://leanpub.com/optics-by-example/).
+- **WAI streaming** -- SSE responses use WAI's native `responseStream`, giving you a `ServerSentEventGenerator` callback with `sendPatchElements`, `sendPatchSignals`, and `sendExecuteScript`.
+- **No routing opinion** -- the SDK provides request helpers (`readSignals`, `isDatastarRequest`) but doesn't impose a routing framework. The examples use simple pattern matching on `(requestMethod, pathInfo)`.
+
+## API Overview
+
+```haskell
+import Hypermedia.Datastar
+
+-- Create an SSE response
+sseResponse :: (ServerSentEventGenerator -> IO ()) -> Response
+
+-- Send events
+sendPatchElements  :: ServerSentEventGenerator -> PatchElements  -> IO ()
+sendPatchSignals   :: ServerSentEventGenerator -> PatchSignals   -> IO ()
+sendExecuteScript  :: ServerSentEventGenerator -> ExecuteScript  -> IO ()
+
+-- Read signals from a request (query string for GET, body for POST)
+readSignals :: FromJSON a => Request -> IO (Either String a)
+```
+
+## Quick Start
+
+Add `datastar-hs` to your `build-depends`, then:
+
+```haskell
+import Hypermedia.Datastar
+import Network.Wai
+import Network.Wai.Handler.Warp qualified as Warp
+
+app :: Application
+app req respond =
+  case (requestMethod req, pathInfo req) of
+    ("GET", ["hello"]) -> do
+      Right signals <- readSignals req
+      respond $ sseResponse $ \gen -> do
+        sendPatchElements gen (patchElements "<div id='message'>Hello!</div>")
+    _ ->
+      respond $ responseLBS status404 [] "Not found"
+
+main :: IO ()
+main = Warp.run 3000 app
+```
+
+## Examples
+
+All examples serve on http://localhost:3000.
+
+### hello-world
+
+Types out "Hello, world!" character by character with a configurable delay.
+
+```bash
+cabal run hello-world
+```
+
+### hello-world-channel
+
+Same as hello-world but uses STM to allow restarting the animation mid-stream by changing the delay.
+
+```bash
+cabal run hello-world-channel
+```
+
+### activity-feed
+
+Demonstrates patching elements and signals together: an activity feed with auto-generation and manual event buttons.
+
+```bash
+cabal run activity-feed
+```
+
+### heap-view
+
+A GHC heap visualizer that walks the heap from a root expression and renders it as an interactive table. Supports forcing individual thunks and live-updating as lazy evaluation proceeds.
+
+```bash
+cabal run heap-view -- simple-list
+cabal run heap-view -- live-map
+cabal run heap-view -- live-fibs
+```
+
+## Further Reading
+
+- [Datastar homepage](https://data-star.dev/) -- guides, reference, and examples
+- [Star Federation on GitHub](https://github.com/starfederation) -- all official Datastar SDKs and tools
+- [Clojure SDK documentation](https://cljdoc.org/d/dev.data-star.clojure/http-kit/1.0.0-RC7/doc/sdk-docs/using-datastar) -- excellent walkthrough of Datastar concepts that applies across all SDKs
+
+## License
+
+[MIT](LICENSE.md)
