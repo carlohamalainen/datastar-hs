@@ -1,0 +1,13 @@
+[Unit]
+Description=Datastar Heap View (simple-list)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/datastar-hs
+ExecStart=/opt/datastar-hs/heap-view simple-list 4003
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

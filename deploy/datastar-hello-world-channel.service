@@ -1,0 +1,13 @@
+[Unit]
+Description=Datastar Hello World Channel
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/datastar-hs
+ExecStart=/opt/datastar-hs/hello-world-channel 4001
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

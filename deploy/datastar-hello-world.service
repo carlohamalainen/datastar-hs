@@ -1,0 +1,13 @@
+[Unit]
+Description=Datastar Hello World
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/datastar-hs
+ExecStart=/opt/datastar-hs/hello-world 4000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
