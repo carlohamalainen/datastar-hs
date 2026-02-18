@@ -109,6 +109,7 @@ executable heap-view
     , http-types
     , stm
     , text
+    , uuid
     , wai
     , warp
     , datastar-hs
