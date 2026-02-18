@@ -15,6 +15,7 @@ import Network.HTTP.Types (status200, status404)
 import Network.Wai (Application, pathInfo, requestMethod, responseLBS)
 import Network.Wai qualified as Wai
 import Network.Wai.Handler.Warp qualified as Warp
+import System.Environment (getArgs)
 
 data Signals = Signals
   { _sInterval :: Int
@@ -83,9 +84,13 @@ eventEntry status index source = do
 
 main :: IO ()
 main = do
+  args <- getArgs
+  let port = case args of
+        (p : _) -> read p
+        _ -> 3000
   htmlContent <- BS.readFile "examples/activity-feed.html"
-  putStrLn "Listening on http://localhost:3000"
-  Warp.run 3000 (app htmlContent)
+  putStrLn $ "Listening on http://localhost:" <> show port
+  Warp.run port (app htmlContent)
 
 app :: BS.ByteString -> Application
 app htmlContent req respond =

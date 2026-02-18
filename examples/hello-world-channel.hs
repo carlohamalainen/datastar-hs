@@ -11,6 +11,7 @@ import Network.HTTP.Types (status200, status404)
 import Network.Wai (Application, pathInfo, requestMethod, responseLBS)
 import Network.Wai qualified as Wai
 import Network.Wai.Handler.Warp qualified as Warp
+import System.Environment (getArgs)
 
 newtype Signals = Signals {_delay :: Int}
   deriving (Show)
@@ -29,10 +30,14 @@ message = "Hello, world!"
 
 main :: IO ()
 main = do
+  args <- getArgs
+  let port = case args of
+        (p : _) -> read p
+        _ -> 3000
   htmlContent <- BS.readFile "examples/hello-world-channel.html"
   state <- SharedState <$> newTVarIO 400 <*> newTVarIO 0
-  putStrLn "Listening on http://localhost:3000"
-  Warp.run 3000 (app htmlContent state)
+  putStrLn $ "Listening on http://localhost:" <> show port
+  Warp.run port (app htmlContent state)
 
 app :: BS.ByteString -> SharedState -> Application
 app htmlContent state req respond =

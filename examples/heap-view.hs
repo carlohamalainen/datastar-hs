@@ -414,22 +414,23 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [name] | Just mode <- lookup name allModes -> startServer mode
+    [name] | Just mode <- lookup name allModes -> startServer 3000 mode
+    [name, portStr] | Just mode <- lookup name allModes -> startServer (read portStr) mode
     _ -> do
-      hPutStrLn stderr "Usage: heap-view <mode>"
+      hPutStrLn stderr "Usage: heap-view <mode> [port]"
       hPutStrLn stderr ""
       hPutStrLn stderr "Modes:"
       mapM_ (\(name, mode) -> hPutStrLn stderr $ "  " <> name <> replicate (16 - length name) ' ' <> T.unpack (modeDesc mode)) allModes
       exitFailure
 
-startServer :: Mode -> IO ()
-startServer mode = do
+startServer :: Int -> Mode -> IO ()
+startServer port mode = do
   htmlContent <- BS.readFile "examples/heap-view.html"
   modeSetup mode
   let hasRun = case modeRun mode of Just _ -> True; Nothing -> False
   putStrLn $ "GHC Heap Visualizer [" <> T.unpack (modeName mode) <> "]"
-  putStrLn "Listening on http://localhost:3000"
-  Warp.run 3000 (app htmlContent mode hasRun)
+  putStrLn $ "Listening on http://localhost:" <> show port
+  Warp.run port (app htmlContent mode hasRun)
 
 app :: BS.ByteString -> Mode -> Bool -> Application
 app htmlContent mode hasRun req respond =
