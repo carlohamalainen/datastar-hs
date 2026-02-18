@@ -2,6 +2,8 @@
 
 A Haskell implementation of the [Datastar](https://data-star.dev/) SDK for building real-time hypermedia applications with server-sent events (SSE).
 
+Live examples: <https://hamalainen.dev>
+
 ## Design
 
 The SDK is built on [WAI](https://github.com/yesodweb/wai) (Web Application Interface), Haskell's standard interface for HTTP servers. This means it works with any WAI-compatible server (Warp, etc.) and any framework built on WAI (Yesod, Scotty, Servant, etc.) without framework-specific adapters.
@@ -53,6 +55,8 @@ main = Warp.run 3000 app
 ```
 
 ## Examples
+
+Live examples: <https://hamalainen.dev>
 
 All examples serve on http://localhost:3000.
 
