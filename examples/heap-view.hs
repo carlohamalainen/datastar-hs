@@ -275,7 +275,7 @@ renderHeapTable showRunBtn exprDesc rootAddr nodes =
     <> "<h1 class='text-2xl font-bold text-gray-900 dark:text-gray-100'>GHC Heap Visualizer</h1>"
     <> "<div class='flex gap-2'>"
     <> runButton
-    <> "<button data-on:click=\"@get('/reset')\" "
+    <> "<button data-on:click=\"@get('reset')\" "
     <> "class='px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium cursor-pointer'>"
     <> "Reset</button>"
     <> "<button data-on:click='$dark = !$dark' "
@@ -283,7 +283,7 @@ renderHeapTable showRunBtn exprDesc rootAddr nodes =
     <> "<span data-show='$dark'>Light</span>"
     <> "<span data-show='!$dark'>Dark</span>"
     <> "</button>"
-    <> "<button data-on:click=\"@get('/heap')\" "
+    <> "<button data-on:click=\"@get('heap')\" "
     <> "class='px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium cursor-pointer'>"
     <> "Refresh</button>"
     <> "</div></div>"
@@ -310,7 +310,7 @@ renderHeapTable showRunBtn exprDesc rootAddr nodes =
  where
   runButton
     | showRunBtn =
-        "<button data-on:click=\"@get('/run')\" "
+        "<button data-on:click=\"@get('run')\" "
           <> "class='px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium cursor-pointer'>"
           <> "Run Demo</button>"
     | otherwise = ""
@@ -401,7 +401,7 @@ renderHeapTable showRunBtn exprDesc rootAddr nodes =
 
   renderActions addr node
     | nodeType node == "thunk" || nodeType node == "ap" || nodeType node == "selector" =
-        "<button data-on:click=\"@get('/force?addr="
+        "<button data-on:click=\"@get('force?addr="
           <> addr
           <> "')\" "
           <> "class='px-3 py-1 bg-amber-200 hover:bg-amber-300 text-amber-800 dark:bg-amber-800 dark:hover:bg-amber-700 dark:text-amber-200 rounded text-xs font-medium cursor-pointer'>"

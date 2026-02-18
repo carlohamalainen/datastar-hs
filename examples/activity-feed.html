@@ -43,7 +43,7 @@
             </div>
             <button
                 id="start-button"
-                data-on:click="@post('/event/generate')"
+                data-on:click="@post('event/generate')"
                 data-signals:generating="false"
                 data-attr:disabled="$generating"
                 data-class="{
@@ -56,25 +56,25 @@
             </button>
             <span>&nbsp;|&nbsp;</span>
             <button
-                data-on:click="@post('/event/done')"
+                data-on:click="@post('event/done')"
                 class="rounded-md bg-sky-500 px-5 py-2.5 leading-5 font-semibold text-white hover:bg-sky-700 hover:text-gray-100 cursor-pointer"
             >
                 Done
             </button>
             <button
-                data-on:click="@post('/event/warn')"
+                data-on:click="@post('event/warn')"
                 class="rounded-md bg-sky-500 px-5 py-2.5 leading-5 font-semibold text-white hover:bg-sky-700 hover:text-gray-100 cursor-pointer"
             >
                 Warn
             </button>
             <button
-                data-on:click="@post('/event/fail')"
+                data-on:click="@post('event/fail')"
                 class="rounded-md bg-sky-500 px-5 py-2.5 leading-5 font-semibold text-white hover:bg-sky-700 hover:text-gray-100 cursor-pointer"
             >
                 Fail
             </button>
             <button
-                data-on:click="@post('/event/info')"
+                data-on:click="@post('event/info')"
                 class="rounded-md bg-sky-500 px-5 py-2.5 leading-5 font-semibold text-white hover:bg-sky-700 hover:text-gray-100 cursor-pointer"
             >
                 Info
