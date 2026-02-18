@@ -22,20 +22,39 @@ import Network.Wai.Handler.Warp qualified as Warp
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
 import System.IO (hPutStrLn, stderr)
-import System.IO.Unsafe (unsafePerformIO)
+import Data.UUID (UUID)
+import Data.UUID qualified as UUID
+import Data.UUID.V4 qualified as UUID
 import System.Mem (performGC)
+
+-- Per-user session state
+data Session = Session
+  { sessId :: UUID
+  , sessExpression :: TVar Box
+  , sessExprDesc :: TVar Text
+  , sessBoxMap :: TVar (Map Text Box)
+  }
+
+-- Shared application state
+data AppState = AppState
+  { appSessions :: TVar (Map UUID Session)
+  , appMode :: Mode
+  , appHasRun :: Bool
+  }
 
 -- Mode configuration
 data Mode = Mode
   { modeName :: Text
   , modeDesc :: Text
-  , modeSetup :: IO ()
-  , modeRun :: Maybe (IO ())
+  , modeSetup :: Session -> IO ()
+  , modeRun :: Maybe (Session -> IO ())
   }
 
--- Expression constructors - NOINLINE + () argument prevents GHC from
--- compiling these as CAFs, so each call creates completely fresh thunks.
--- Without this, [1..10] etc. get shared and stay forced after the first run.
+-- Expression constructors - NOINLINE + () argument ensures each call
+-- allocates fresh thunks at -O0 (which heap-view uses). The () forces
+-- function entry, and at -O0 GHC doesn't float subexpressions out as CAFs.
+-- An IO [Int] with `pure $` does NOT work: the thunk is part of the CAF
+-- and shared across all calls, so forced thunks stay forced after reset.
 
 mkSimpleExpr :: () -> [Int]
 mkSimpleExpr () = [1, 2, 3, 4, 5] ++ map (* 10) [6, 7, 8]
@@ -59,12 +78,12 @@ simpleList =
   Mode
     { modeName = "simple-list"
     , modeDesc = "[1,2,3,4,5] ++ map (*10) [6,7,8]"
-    , modeSetup = do
+    , modeSetup = \sess -> do
         let expr = mkSimpleExpr ()
         _ <- evaluate expr
         atomically $ do
-          writeTVar currentExpression (asBox expr)
-          writeTVar currentExprDesc "[1,2,3,4,5] ++ map (*10) [6,7,8]"
+          writeTVar (sessExpression sess) (asBox expr)
+          writeTVar (sessExprDesc sess) "[1,2,3,4,5] ++ map (*10) [6,7,8]"
     , modeRun = Nothing
     }
 
@@ -73,16 +92,16 @@ liveMap =
   Mode
     { modeName = "live-map"
     , modeDesc = "map (*2) [1..10]"
-    , modeSetup = do
+    , modeSetup = \sess -> do
         let expr = mkMapExpr ()
         atomically $ do
-          writeTVar currentExpression (asBox expr)
-          writeTVar currentExprDesc "map (*2) [1..10]"
-    , modeRun = Just $ do
+          writeTVar (sessExpression sess) (asBox expr)
+          writeTVar (sessExprDesc sess) "map (*2) [1..10]"
+    , modeRun = Just $ \sess -> do
         let expr = mkMapExpr ()
         atomically $ do
-          writeTVar currentExpression (asBox expr)
-          writeTVar currentExprDesc "map (*2) [1..10]"
+          writeTVar (sessExpression sess) (asBox expr)
+          writeTVar (sessExprDesc sess) "map (*2) [1..10]"
         _ <- forkIO $ forceListSlowly expr
         pure ()
     }
@@ -92,16 +111,16 @@ liveFibs =
   Mode
     { modeName = "live-fibs"
     , modeDesc = "take 15 fibs"
-    , modeSetup = do
+    , modeSetup = \sess -> do
         let expr = mkFibsExpr ()
         atomically $ do
-          writeTVar currentExpression (asBox expr)
-          writeTVar currentExprDesc "take 15 fibs"
-    , modeRun = Just $ do
+          writeTVar (sessExpression sess) (asBox expr)
+          writeTVar (sessExprDesc sess) "take 15 fibs"
+    , modeRun = Just $ \sess -> do
         let expr = mkFibsExpr ()
         atomically $ do
-          writeTVar currentExpression (asBox expr)
-          writeTVar currentExprDesc "take 15 fibs"
+          writeTVar (sessExpression sess) (asBox expr)
+          writeTVar (sessExprDesc sess) "take 15 fibs"
         _ <- forkIO $ forceListSlowly expr
         pure ()
     }
@@ -112,6 +131,39 @@ allModes =
   , ("live-map", liveMap)
   , ("live-fibs", liveFibs)
   ]
+
+-- Session management
+
+newSession :: AppState -> IO Session
+newSession appState = do
+  sid <- UUID.nextRandom
+  sess <-
+    Session sid
+      <$> newTVarIO (asBox ())
+      <*> newTVarIO ""
+      <*> newTVarIO Map.empty
+  atomically $ modifyTVar' (appSessions appState) (Map.insert sid sess)
+  pure sess
+
+lookupSession :: AppState -> UUID -> IO (Maybe Session)
+lookupSession appState sid =
+  Map.lookup sid <$> readTVarIO (appSessions appState)
+
+getSessionId :: Request -> Maybe UUID
+getSessionId req =
+  case lookup "s" (queryToQueryText (queryString req)) of
+    Just (Just s) -> UUID.fromText s
+    _ -> Nothing
+
+withSession :: AppState -> Request -> (Response -> IO b) -> (Session -> IO b) -> IO b
+withSession appState req respond action =
+  case getSessionId req of
+    Just sid -> do
+      msess <- lookupSession appState sid
+      case msess of
+        Just sess -> action sess
+        Nothing -> respond $ responseLBS status404 [] "Session not found"
+    Nothing -> respond $ responseLBS status400 [] "Missing session"
 
 -- Force a list spine + elements one by one with delay
 forceListSlowly :: [Int] -> IO ()
@@ -128,19 +180,6 @@ data HeapNode = HeapNode
   , nodePointers :: [Text]
   }
 
--- Global state
-globalBoxMap :: TVar (Map Text Box)
-{-# NOINLINE globalBoxMap #-}
-globalBoxMap = unsafePerformIO $ newTVarIO Map.empty
-
-currentExpression :: TVar Box
-{-# NOINLINE currentExpression #-}
-currentExpression = unsafePerformIO $ newTVarIO $ asBox ()
-
-currentExprDesc :: TVar Text
-{-# NOINLINE currentExprDesc #-}
-currentExprDesc = unsafePerformIO $ newTVarIO ""
-
 -- Get closure data from a Box (unwrap the Box to see what's inside)
 getBoxClosure :: Box -> IO (GenClosure Box)
 getBoxClosure (Box a) = getClosureData a
@@ -149,8 +188,8 @@ boxAddr :: Box -> Text
 boxAddr = T.pack . show
 
 -- Walk the heap from a root Box via DFS
-walkHeap :: Box -> Int -> IO (Text, Map Text HeapNode)
-walkHeap startBox maxDepth = do
+walkHeap :: Session -> Box -> Int -> IO (Text, Map Text HeapNode)
+walkHeap sess startBox maxDepth = do
   nodesRef <- newTVarIO Map.empty
   boxMapRef <- newTVarIO Map.empty
   visitedRef <- newTVarIO Set.empty
@@ -159,7 +198,7 @@ walkHeap startBox maxDepth = do
 
   nodes <- readTVarIO nodesRef
   boxMap <- readTVarIO boxMapRef
-  atomically $ modifyTVar' globalBoxMap (const boxMap)
+  atomically $ writeTVar (sessBoxMap sess) boxMap
 
   pure (boxAddr startBox, nodes)
  where
@@ -255,9 +294,9 @@ walkHeap startBox maxDepth = do
       _ -> Nothing
 
 -- Force a thunk by its Box address
-forceThunk :: Text -> IO ()
-forceThunk addr = do
-  boxMap <- readTVarIO globalBoxMap
+forceThunk :: Session -> Text -> IO ()
+forceThunk sess addr = do
+  boxMap <- readTVarIO (sessBoxMap sess)
   case Map.lookup addr boxMap of
     Nothing -> putStrLn $ "Box not found: " <> T.unpack addr
     Just (Box a) -> do
@@ -268,14 +307,14 @@ forceThunk addr = do
       pure ()
 
 -- Render the heap as an HTML table
-renderHeapTable :: Bool -> Text -> Text -> Map Text HeapNode -> Text
-renderHeapTable showRunBtn exprDesc rootAddr nodes =
+renderHeapTable :: UUID -> Bool -> Text -> Text -> Map Text HeapNode -> Text
+renderHeapTable sid showRunBtn exprDesc rootAddr nodes =
   "<div id='main' class='max-w-5xl mx-auto'>"
     <> "<div class='flex items-center justify-between mb-6'>"
     <> "<h1 class='text-2xl font-bold text-gray-900 dark:text-gray-100'>GHC Heap Visualizer</h1>"
     <> "<div class='flex gap-2'>"
     <> runButton
-    <> "<button data-on:click=\"@get('reset')\" "
+    <> "<button data-on:click=\"@get('reset?s=" <> s <> "')\" "
     <> "class='px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium cursor-pointer'>"
     <> "Reset</button>"
     <> "<button data-on:click='$dark = !$dark' "
@@ -283,7 +322,7 @@ renderHeapTable showRunBtn exprDesc rootAddr nodes =
     <> "<span data-show='$dark'>Light</span>"
     <> "<span data-show='!$dark'>Dark</span>"
     <> "</button>"
-    <> "<button data-on:click=\"@get('heap')\" "
+    <> "<button data-on:click=\"@get('heap?s=" <> s <> "')\" "
     <> "class='px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium cursor-pointer'>"
     <> "Refresh</button>"
     <> "</div></div>"
@@ -308,9 +347,11 @@ renderHeapTable showRunBtn exprDesc rootAddr nodes =
     <> mconcat (map renderRow orderedNodes)
     <> "</tbody></table></div></div>"
  where
+  s = UUID.toText sid
+
   runButton
     | showRunBtn =
-        "<button data-on:click=\"@get('run')\" "
+        "<button data-on:click=\"@get('run?s=" <> s <> "')\" "
           <> "class='px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium cursor-pointer'>"
           <> "Run Demo</button>"
     | otherwise = ""
@@ -401,7 +442,7 @@ renderHeapTable showRunBtn exprDesc rootAddr nodes =
 
   renderActions addr node
     | nodeType node == "thunk" || nodeType node == "ap" || nodeType node == "selector" =
-        "<button data-on:click=\"@get('force?addr="
+        "<button data-on:click=\"@get('force?s=" <> s <> "&addr="
           <> addr
           <> "')\" "
           <> "class='px-3 py-1 bg-amber-200 hover:bg-amber-300 text-amber-800 dark:bg-amber-800 dark:hover:bg-amber-700 dark:text-amber-200 rounded text-xs font-medium cursor-pointer'>"
@@ -426,65 +467,84 @@ main = do
 startServer :: Int -> Mode -> IO ()
 startServer port mode = do
   htmlContent <- BS.readFile "examples/heap-view.html"
-  modeSetup mode
   let hasRun = case modeRun mode of Just _ -> True; Nothing -> False
+  appState <-
+    AppState
+      <$> newTVarIO Map.empty
+      <*> pure mode
+      <*> pure hasRun
   putStrLn $ "GHC Heap Visualizer [" <> T.unpack (modeName mode) <> "]"
   putStrLn $ "Listening on http://localhost:" <> show port
-  Warp.run port (app htmlContent mode hasRun)
+  Warp.run port (app htmlContent appState)
 
-app :: BS.ByteString -> Mode -> Bool -> Application
-app htmlContent mode hasRun req respond =
+app :: BS.ByteString -> AppState -> Application
+app htmlContent appState req respond =
   case (requestMethod req, pathInfo req) of
     ("GET", []) ->
       respond $ responseLBS status200 [("Content-Type", "text/html")] (LBS.fromStrict htmlContent)
     ("GET", ["heap"]) ->
-      handleHeap hasRun respond
+      withSession appState req respond $ \sess ->
+        handleHeap appState sess respond
     ("GET", ["force"]) ->
-      handleForce hasRun req respond
+      withSession appState req respond $ \sess ->
+        handleForce appState sess req respond
     ("GET", ["run"])
-      | Just run <- modeRun mode ->
-          handleRun hasRun run respond
+      | Just _ <- modeRun (appMode appState) ->
+          withSession appState req respond $ \sess ->
+            handleRun appState sess respond
     ("GET", ["reset"]) ->
-      handleReset hasRun mode respond
+      handleReset appState req respond
     _ ->
       respond $ responseLBS status404 [] "Not found"
 
-sendHeapUpdate :: Bool -> ServerSentEventGenerator -> IO ()
-sendHeapUpdate showRunBtn gen = do
-  box <- readTVarIO currentExpression
-  desc <- readTVarIO currentExprDesc
+sendHeapUpdate :: AppState -> Session -> ServerSentEventGenerator -> IO ()
+sendHeapUpdate appState sess gen = do
+  box <- readTVarIO (sessExpression sess)
+  desc <- readTVarIO (sessExprDesc sess)
   performGC
-  (rootAddr, nodes) <- walkHeap box 20
-  let html = renderHeapTable showRunBtn desc rootAddr nodes
+  (rootAddr, nodes) <- walkHeap sess box 20
+  let html = renderHeapTable (sessId sess) (appHasRun appState) desc rootAddr nodes
   sendPatchElements gen (patchElements html)
 
-handleHeap :: Bool -> (Response -> IO b) -> IO b
-handleHeap hasRun respond =
+handleHeap :: AppState -> Session -> (Response -> IO b) -> IO b
+handleHeap appState sess respond =
   respond $ sseResponse $ \gen ->
-    sendHeapUpdate hasRun gen
+    sendHeapUpdate appState sess gen
 
-handleForce :: Bool -> Request -> (Response -> IO b) -> IO b
-handleForce hasRun req respond = do
+handleForce :: AppState -> Session -> Request -> (Response -> IO b) -> IO b
+handleForce appState sess req respond = do
   let params = queryToQueryText (queryString req)
   case lookup "addr" params of
     Just (Just addr) -> do
-      forceThunk addr
+      forceThunk sess addr
       respond $ sseResponse $ \gen ->
-        sendHeapUpdate hasRun gen
+        sendHeapUpdate appState sess gen
     _ ->
       respond $ responseLBS status400 [] "Missing addr parameter"
 
-handleReset :: Bool -> Mode -> (Response -> IO b) -> IO b
-handleReset hasRun mode respond = do
-  modeSetup mode
+handleReset :: AppState -> Request -> (Response -> IO b) -> IO b
+handleReset appState req respond = do
+  -- Reuse existing session on explicit reset, create new on first page load
+  sess <- case getSessionId req of
+    Just sid -> do
+      msess <- lookupSession appState sid
+      case msess of
+        Just s -> pure s
+        Nothing -> newSession appState
+    Nothing -> newSession appState
+  modeSetup (appMode appState) sess
   respond $ sseResponse $ \gen ->
-    sendHeapUpdate hasRun gen
+    sendHeapUpdate appState sess gen
 
-handleRun :: Bool -> IO () -> (Response -> IO b) -> IO b
-handleRun hasRun run respond = do
-  run
-  respond $ sseResponse $ \gen -> do
-    -- Stream live updates every 200ms for ~12 seconds
-    replicateM_ 60 $ do
-      sendHeapUpdate hasRun gen
-      threadDelay 200000
+handleRun :: AppState -> Session -> (Response -> IO b) -> IO b
+handleRun appState sess respond = do
+  case modeRun (appMode appState) of
+    Just run -> do
+      run sess
+      respond $ sseResponse $ \gen -> do
+        -- Stream live updates every 200ms for ~12 seconds
+        replicateM_ 60 $ do
+          sendHeapUpdate appState sess gen
+          threadDelay 200000
+    Nothing ->
+      respond $ responseLBS status404 [] "Not found"
