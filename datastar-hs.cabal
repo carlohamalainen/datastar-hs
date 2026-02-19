@@ -32,3 +32,17 @@ library
     , text
     , wai
 
+test-suite datastar-hs-test
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   test
+  main-is:          Main.hs
+  other-modules:
+    Hypermedia.Datastar.PatchElementsSpec
+  build-depends:
+    , base
+    , datastar-hs
+    , hspec
+    , text
+  default-extensions:
+    ImportQualifiedPost
+    OverloadedStrings
