@@ -20,15 +20,16 @@ spec = describe "Hypermedia.Datastar.PatchElements.toDatastarEvent" $ do
     dataLines event `shouldBe` ["elements <div id=\"feed\"><span>1</span></div>"]
 
   it "full: all options set" $ do
-    let event = toDatastarEvent $ 
-          (patchElements "<div id=\"feed\">\n    <span>1</span>\n</div>")
-            { peSelector = Just "#feed"
-            , peMode = Inner
-            , peUseViewTransition = True
-            , peNamespace = HtmlNs
-            , peEventId = Just "123"
-            , peRetryDuration = 2000
-            }
+    let event =
+          toDatastarEvent $
+            (patchElements "<div id=\"feed\">\n    <span>1</span>\n</div>")
+              { peSelector = Just "#feed"
+              , peMode = Inner
+              , peUseViewTransition = True
+              , peNamespace = HtmlNs
+              , peEventId = Just "123"
+              , peRetryDuration = 2000
+              }
 
     eventType event `shouldBe` EventPatchElements
     eventId event `shouldBe` Just "123"

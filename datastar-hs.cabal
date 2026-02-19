@@ -38,11 +38,14 @@ test-suite datastar-hs-test
   main-is:          Main.hs
   other-modules:
     Hypermedia.Datastar.PatchElementsSpec
+    Hypermedia.Datastar.SSESpec
   build-depends:
     , base
+    , bytestring
     , datastar-hs
     , hspec
     , text
+    , wai
   default-extensions:
     ImportQualifiedPost
     OverloadedStrings
