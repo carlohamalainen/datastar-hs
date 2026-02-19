@@ -2,7 +2,6 @@ module Hypermedia.Datastar.WAI where
 
 import Control.Concurrent.MVar
 import Control.Exception
-import Control.Lens
 
 import Data.Text (Text)
 import Data.Text.Encoding qualified as TE
@@ -22,13 +21,11 @@ import Hypermedia.Datastar.PatchElements qualified as PE
 import Hypermedia.Datastar.PatchSignals qualified as PS
 
 data ServerSentEventGenerator = ServerSentEventGenerator
-  { _sseWrite :: BSB.Builder -> IO ()
-  , _sseFlush :: IO ()
-  , _sseLock :: MVar ()
-  -- , _sseLogger :: DatastarLogger -- FIXME
+  { sseWrite :: BSB.Builder -> IO ()
+  , sseFlush :: IO ()
+  , sseLock :: MVar ()
+  -- , sseLogger :: DatastarLogger -- FIXME
   }
-
-makeLenses ''ServerSentEventGenerator
 
 sseResponse :: (ServerSentEventGenerator -> IO ()) -> WAI.Response
 sseResponse callback =
@@ -47,9 +44,9 @@ sseResponse callback =
     lock <- newMVar ()
     callback $
       ServerSentEventGenerator
-        { _sseWrite = write
-        , _sseFlush = flush
-        , _sseLock = lock
+        { sseWrite = write
+        , sseFlush = flush
+        , sseLock = lock
         }
 
 send :: ServerSentEventGenerator -> DatastarEvent -> IO ()
@@ -57,11 +54,11 @@ send gen event = do
   let rendered = renderEvent event
 
   bracket_
-    (takeMVar $ gen ^. sseLock)
-    (putMVar (gen ^. sseLock) ())
+    (takeMVar $ sseLock gen)
+    (putMVar (sseLock gen) ())
     $ do
-      (gen ^. sseWrite) rendered
-      gen ^. sseFlush
+      sseWrite gen rendered
+      sseFlush gen
 
 -- FIXME run logger for send event
 -- FIXME exceptions? How safe is this?
@@ -93,17 +90,17 @@ parseFromBody :: (FromJSON a) => WAI.Request -> IO (Either String a)
 parseFromBody req = A.eitherDecode <$> WAI.strictRequestBody req
 
 isDatastarRequest :: WAI.Request -> Bool
-isDatastarRequest = has $ to WAI.requestHeaders . folded . _1 . only "datastar-request"
+isDatastarRequest req = any ((== "datastar-request") . fst) (WAI.requestHeaders req)
 
 renderEvent :: DatastarEvent -> BSB.Builder
 renderEvent event =
   mconcat
-    [ BSB.stringUtf8 "event: " <> text (event ^. eventType . to eventTypeToText) <> newline
-    , event ^. eventId . _Just . to (\eid -> BSB.stringUtf8 "id: " <> text eid <> newline)
-    , if event ^. retry /= defaultRetryDuration
-        then BSB.stringUtf8 "retry: " <> BSB.intDec (event ^. retry) <> newline
+    [ BSB.stringUtf8 "event: " <> text (eventTypeToText (eventType event)) <> newline
+    , maybe mempty (\eid -> BSB.stringUtf8 "id: " <> text eid <> newline) (eventId event)
+    , if retry event /= defaultRetryDuration
+        then BSB.stringUtf8 "retry: " <> BSB.intDec (retry event) <> newline
         else mempty
-    , event ^. dataLines . folded . to (\line -> BSB.stringUtf8 "data: " <> text line <> newline)
+    , foldMap (\line -> BSB.stringUtf8 "data: " <> text line <> newline) (dataLines event)
     , newline
     ]
  where

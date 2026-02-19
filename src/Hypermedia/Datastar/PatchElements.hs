@@ -1,46 +1,42 @@
 module Hypermedia.Datastar.PatchElements where
 
-import Control.Lens
-
 import Data.Text (Text)
 import Data.Text qualified as T
 import Hypermedia.Datastar.Types
 
 data PatchElements = PatchElements
-  { _peElements :: Maybe Text
-  , _peSelector :: Maybe Text
-  , _peMode :: ElementPatchMode
-  , _peUseViewTransition :: Bool
-  , _peNamespace :: ElementNamespace
-  , _peEventId :: Maybe Text
-  , _peRetryDuration :: Int
+  { peElements :: Maybe Text
+  , peSelector :: Maybe Text
+  , peMode :: ElementPatchMode
+  , peUseViewTransition :: Bool
+  , peNamespace :: ElementNamespace
+  , peEventId :: Maybe Text
+  , peRetryDuration :: Int
   }
   deriving (Eq, Show)
-
-makeLenses ''PatchElements
 
 patchElements :: Text -> PatchElements
 patchElements html =
   PatchElements
-    { _peElements = if T.null html then Nothing else Just html
-    , _peSelector = Nothing
-    , _peMode = defaultPatchMode
-    , _peUseViewTransition = defaultUseViewTransition
-    , _peNamespace = defaultNamespace
-    , _peEventId = Nothing
-    , _peRetryDuration = defaultRetryDuration
+    { peElements = if T.null html then Nothing else Just html
+    , peSelector = Nothing
+    , peMode = defaultPatchMode
+    , peUseViewTransition = defaultUseViewTransition
+    , peNamespace = defaultNamespace
+    , peEventId = Nothing
+    , peRetryDuration = defaultRetryDuration
     }
 
 removeElements :: Text -> PatchElements
 removeElements sel =
   PatchElements
-    { _peElements = Nothing
-    , _peSelector = Just sel
-    , _peMode = defaultPatchMode
-    , _peUseViewTransition = defaultUseViewTransition
-    , _peNamespace = defaultNamespace
-    , _peEventId = Nothing
-    , _peRetryDuration = defaultRetryDuration
+    { peElements = Nothing
+    , peSelector = Just sel
+    , peMode = defaultPatchMode
+    , peUseViewTransition = defaultUseViewTransition
+    , peNamespace = defaultNamespace
+    , peEventId = Nothing
+    , peRetryDuration = defaultRetryDuration
     }
 
 -- FIXME link to ADR - fields only need to be included if non-default etc
@@ -48,21 +44,21 @@ removeElements sel =
 toDatastarEvent :: PatchElements -> DatastarEvent
 toDatastarEvent pe =
   DatastarEvent
-    { _eventType = EventPatchElements
-    , _eventId = pe ^. peEventId
-    , _retry = pe ^. peRetryDuration
-    , _dataLines =
+    { eventType = EventPatchElements
+    , eventId = peEventId pe
+    , retry = peRetryDuration pe
+    , dataLines =
         concat
-          [ pe ^. peSelector . _Just . to (pure . ("selector " <>))
-          , [ "mode " <> patchModeToText (pe ^. peMode)
-            | pe ^. peMode /= defaultPatchMode
+          [ maybe [] (\s -> ["selector " <> s]) (peSelector pe)
+          , [ "mode " <> patchModeToText (peMode pe)
+            | peMode pe /= defaultPatchMode
             ]
           , [ "useViewTransition true"
-            | pe ^. peUseViewTransition
+            | peUseViewTransition pe
             ]
-          , [ "namespace " <> namespaceToText (pe ^. peNamespace)
-            | pe ^. peNamespace /= defaultNamespace
+          , [ "namespace " <> namespaceToText (peNamespace pe)
+            | peNamespace pe /= defaultNamespace
             ]
-          , pe ^. peElements . _Just . to T.lines . to (map ("elements " <>))
+          , maybe [] (map ("elements " <>) . T.lines) (peElements pe)
           ]
     }

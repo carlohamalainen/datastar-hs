@@ -24,14 +24,11 @@ library
   default-extensions:
     ImportQualifiedPost
     OverloadedStrings
-    TemplateHaskell
   build-depends:
     , base >= 4.7
     , aeson
     , bytestring
-    , case-insensitive
     , http-types
-    , lens
     , text
     , wai
 

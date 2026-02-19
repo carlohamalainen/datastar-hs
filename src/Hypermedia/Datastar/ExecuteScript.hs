@@ -1,39 +1,35 @@
 module Hypermedia.Datastar.ExecuteScript where
 
-import Control.Lens
-
 import Data.Text (Text)
 import Data.Text qualified as T
 import Hypermedia.Datastar.Types
 
 data ExecuteScript = ExecuteScript
-  { _esScript :: Text
-  , _esAutoRemove :: Bool
-  , _esAttributes :: [Text]
-  , _esEventId :: Maybe Text
-  , _esRetryDuration :: Int
+  { esScript :: Text
+  , esAutoRemove :: Bool
+  , esAttributes :: [Text]
+  , esEventId :: Maybe Text
+  , esRetryDuration :: Int
   }
   deriving (Eq, Show)
-
-makeLenses ''ExecuteScript
 
 executeScript :: Text -> ExecuteScript
 executeScript js =
   ExecuteScript
-    { _esScript = js
-    , _esAutoRemove = defaultAutoRemove
-    , _esAttributes = []
-    , _esEventId = Nothing
-    , _esRetryDuration = defaultRetryDuration
+    { esScript = js
+    , esAutoRemove = defaultAutoRemove
+    , esAttributes = []
+    , esEventId = Nothing
+    , esRetryDuration = defaultRetryDuration
     }
 
 toDatastarEvent :: ExecuteScript -> DatastarEvent
 toDatastarEvent es =
   DatastarEvent
-    { _eventType = EventPatchElements -- Correct, there is no EventExecuteScript, see the ADR
-    , _eventId = es ^. esEventId
-    , _retry = es ^. esRetryDuration
-    , _dataLines =
+    { eventType = EventPatchElements -- Correct, there is no EventExecuteScript, see the ADR
+    , eventId = esEventId es
+    , retry = esRetryDuration es
+    , dataLines =
         [ "selector body"
         , "mode append"
         ]
@@ -42,7 +38,7 @@ toDatastarEvent es =
 
 buildScriptLines :: ExecuteScript -> [Text]
 buildScriptLines es =
-  case es ^. esScript . to T.lines of
+  case T.lines (esScript es) of
     [] -> ["elements " <> openTag <> closeTag]
     [single] -> ["elements " <> openTag <> single <> closeTag]
     multiple ->
@@ -53,8 +49,8 @@ buildScriptLines es =
   openTag :: Text
   openTag =
     "<script"
-      <> (if es ^. esAutoRemove then " data-effect=\"el.remove()\"" else "")
-      <> es ^. esAttributes . folded . to (" " <>)
+      <> (if esAutoRemove es then " data-effect=\"el.remove()\"" else "")
+      <> foldMap (" " <>) (esAttributes es)
       <> ">"
 
   closeTag :: Text

@@ -1,6 +1,5 @@
 module Hypermedia.Datastar.Types where
 
-import Control.Lens
 import Data.Text (Text)
 
 data EventType
@@ -45,13 +44,11 @@ namespaceToText SvgNs = "svg"
 namespaceToText MathmlNs = "mathml"
 
 data DatastarEvent = DatastarEvent
-  { _eventType :: EventType
-  , _eventId :: Maybe Text
-  , _retry :: Int
-  , _dataLines :: [Text]
+  { eventType :: EventType
+  , eventId :: Maybe Text
+  , retry :: Int
+  , dataLines :: [Text]
   }
-
-makeLenses ''DatastarEvent
 
 -- FIXME link to the ADR, these constants are defined there
 

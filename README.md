@@ -8,7 +8,7 @@ The SDK is built on [WAI](https://github.com/yesodweb/wai) (Web Application Inte
 
 Key design decisions:
 
-- **Lens-based** -- I like optics, and I recommend Chris Penner's [Optics By Example](https://leanpub.com/optics-by-example/).
+- **Minimal dependencies** -- the library depends only on `aeson`, `bytestring`, `http-types`, `text`, and `wai`.
 - **WAI streaming** -- SSE responses use WAI's native `responseStream`, giving you a `ServerSentEventGenerator` callback with `sendPatchElements`, `sendPatchSignals`, and `sendExecuteScript`.
 - **No routing opinion** -- the SDK provides request helpers (`readSignals`, `isDatastarRequest`) but doesn't impose a routing framework. The examples use simple pattern matching on `(requestMethod, pathInfo)`.
 
@@ -54,41 +54,7 @@ main = Warp.run 3000 app
 
 ## Examples
 
-All examples serve on http://localhost:3000.
-
-### hello-world
-
-Types out "Hello, world!" character by character with a configurable delay.
-
-```bash
-cabal run hello-world
-```
-
-### hello-world-channel
-
-Same as hello-world but uses STM to allow restarting the animation mid-stream by changing the delay.
-
-```bash
-cabal run hello-world-channel
-```
-
-### activity-feed
-
-Demonstrates patching elements and signals together: an activity feed with auto-generation and manual event buttons.
-
-```bash
-cabal run activity-feed
-```
-
-### heap-view
-
-A GHC heap visualizer that walks the heap from a root expression and renders it as an interactive table. Supports forcing individual thunks and live-updating as lazy evaluation proceeds.
-
-```bash
-cabal run heap-view -- simple-list
-cabal run heap-view -- live-map
-cabal run heap-view -- live-fibs
-```
+See [datastar-hs-examples](https://github.com/carlohamalainen/datastar-hs-examples) for working examples including hello-world, activity-feed, and a GHC heap visualizer.
 
 ## Further Reading
 
