@@ -5,6 +5,9 @@ building real-time hypermedia applications with server-sent events (SSE).
 
 Live examples: <https://hamalainen.dev>
 
+To minimise dependencies for the library, examples are hosted in
+a separate repo: <https://github.com/carlohamalainen/datastar-hs-examples>
+
 ## Design
 
 The SDK is built on [WAI](https://github.com/yesodweb/wai) (Web Application
