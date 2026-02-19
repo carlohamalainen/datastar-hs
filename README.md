@@ -1,16 +1,27 @@
 # Datastar Haskell SDK
 
-A Haskell implementation of the [Datastar](https://data-star.dev/) SDK for building real-time hypermedia applications with server-sent events (SSE).
+A Haskell implementation of the [Datastar](https://data-star.dev/) SDK for
+building real-time hypermedia applications with server-sent events (SSE).
+
+Live examples: <https://hamalainen.dev>
 
 ## Design
 
-The SDK is built on [WAI](https://github.com/yesodweb/wai) (Web Application Interface), Haskell's standard interface for HTTP servers. This means it works with any WAI-compatible server (Warp, etc.) and any framework built on WAI (Yesod, Scotty, Servant, etc.) without framework-specific adapters.
+The SDK is built on [WAI](https://github.com/yesodweb/wai) (Web Application
+Interface), Haskell's standard interface for HTTP servers. This means it works
+with any WAI-compatible server (Warp, etc.) and any framework built on WAI
+(Yesod, Scotty, Servant, etc.) without framework-specific adapters.
 
 Key design decisions:
 
-- **Minimal dependencies** -- the library depends only on `aeson`, `bytestring`, `http-types`, `text`, and `wai`.
-- **WAI streaming** -- SSE responses use WAI's native `responseStream`, giving you a `ServerSentEventGenerator` callback with `sendPatchElements`, `sendPatchSignals`, and `sendExecuteScript`.
-- **No routing opinion** -- the SDK provides request helpers (`readSignals`, `isDatastarRequest`) but doesn't impose a routing framework. The examples use simple pattern matching on `(requestMethod, pathInfo)`.
+- **Minimal dependencies** -- the library depends only on `aeson`, `bytestring`,
+`http-types`, `text`, and `wai`.
+- **WAI streaming** -- SSE responses use WAI's native `responseStream`, giving
+you a `ServerSentEventGenerator` callback with `sendPatchElements`,
+`sendPatchSignals`, and `sendExecuteScript`.
+- **No routing opinion** -- the SDK provides request helpers (`readSignals`,
+`isDatastarRequest`) but doesn't impose a routing framework. The examples use
+simple pattern matching on `(requestMethod, pathInfo)`.
 
 ## API Overview
 
@@ -52,10 +63,6 @@ main :: IO ()
 main = Warp.run 3000 app
 ```
 
-## Examples
-
-See [datastar-hs-examples](https://github.com/carlohamalainen/datastar-hs-examples) for working examples including hello-world, activity-feed, and a GHC heap visualizer.
-
 ## Further Reading
 
 - [Datastar homepage](https://data-star.dev/) -- guides, reference, and examples
@@ -65,4 +72,3 @@ See [datastar-hs-examples](https://github.com/carlohamalainen/datastar-hs-exampl
 ## License
 
 [MIT](LICENSE.md)
-
