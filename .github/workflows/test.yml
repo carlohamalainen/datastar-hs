@@ -17,12 +17,16 @@ jobs:
         with:
           ghc-version: "9.6.7"
 
-      - name: Cache cabal store
+      - name: Cache
         uses: actions/cache@v4
         with:
-          path: ~/.cabal/store
-          key: ${{ runner.os }}-cabal-${{ hashFiles('**/*.cabal') }}
-          restore-keys: ${{ runner.os }}-cabal-
+          path: |
+            ~/.cabal/store
+            dist-newstyle
+          key: ${{ runner.os }}-cabal-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('**/*.hs') }}
+          restore-keys: |
+            ${{ runner.os }}-cabal-${{ hashFiles('**/*.cabal') }}-
+            ${{ runner.os }}-cabal-
 
       - name: Install dependencies
         run: cabal update && cabal build --only-dependencies
