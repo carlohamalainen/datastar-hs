@@ -5,6 +5,12 @@
 A Haskell implementation of the [Datastar](https://data-star.dev/) SDK for
 building real-time hypermedia applications with server-sent events (SSE).
 
+Datastar is a hypermedia framework: instead of building a JSON API and a
+JavaScript SPA, you write HTML on the server and let Datastar handle the
+interactivity. The browser sends requests, the server holds the connection
+open as an SSE stream, and pushes HTML fragments, signal updates, or scripts
+back to the browser as things change.
+
 Live examples: <https://hamalainen.dev>
 
 To minimise dependencies for the library, examples are hosted in
@@ -60,7 +66,7 @@ app req respond =
     ("GET", ["hello"]) -> do
       Right signals <- readSignals req
       respond $ sseResponse $ \gen -> do
-        sendPatchElements gen (patchElements "<div id='message'>Hello!</div>")
+        sendPatchElements gen (patchElements "<div id=\"message\">Hello!</div>")
     _ ->
       respond $ responseLBS status404 [] "Not found"
 

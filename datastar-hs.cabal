@@ -2,6 +2,12 @@ cabal-version:   3.0
 name:            datastar-hs
 version:         0.1.0.0
 synopsis:        Haskell bindings for Datastar
+description:
+  Server-side SDK for building real-time hypermedia applications with
+  <https://data-star.dev/ Datastar>. Stream HTML fragments, reactive
+  signal updates, and scripts to the browser over server-sent events
+  (SSE). Built on WAI so it works with Warp, Scotty, Servant, Yesod,
+  and any other WAI-compatible framework.
 license:         MIT
 license-file:    LICENSE
 author:          Carlo Hamalainen
