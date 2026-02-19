@@ -1,5 +1,7 @@
 # Datastar Haskell SDK
 
+[![Test](https://github.com/carlohamalainen/datastar-hs/actions/workflows/test.yml/badge.svg)](https://github.com/carlohamalainen/datastar-hs/actions/workflows/test.yml)
+
 A Haskell implementation of the [Datastar](https://data-star.dev/) SDK for
 building real-time hypermedia applications with server-sent events (SSE).
 
