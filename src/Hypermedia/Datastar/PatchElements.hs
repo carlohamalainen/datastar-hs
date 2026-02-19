@@ -32,7 +32,7 @@ removeElements sel =
   PatchElements
     { peElements = Nothing
     , peSelector = Just sel
-    , peMode = defaultPatchMode
+    , peMode = Remove
     , peUseViewTransition = defaultUseViewTransition
     , peNamespace = defaultNamespace
     , peEventId = Nothing
