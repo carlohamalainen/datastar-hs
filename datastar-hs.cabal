@@ -8,6 +8,8 @@ description:
   signal updates, and scripts to the browser over server-sent events
   (SSE). Built on WAI so it works with Warp, Scotty, Servant, Yesod,
   and any other WAI-compatible framework.
+homepage:        https://github.com/carlohamalainen/datastar-hs
+bug-reports:     https://github.com/carlohamalainen/datastar-hs/issues
 license:         MIT
 license-file:    LICENSE
 author:          Carlo Hamalainen
@@ -17,26 +19,26 @@ build-type:      Simple
 extra-doc-files: CHANGELOG.md
 
 library
-  exposed-modules: 
+  exposed-modules:
     Hypermedia.Datastar
     Hypermedia.Datastar.ExecuteScript
     Hypermedia.Datastar.Logger
     Hypermedia.Datastar.PatchElements
-    Hypermedia.Datastar.PatchSignals 
+    Hypermedia.Datastar.PatchSignals
     Hypermedia.Datastar.Types
-    Hypermedia.Datastar.WAI 
+    Hypermedia.Datastar.WAI
   hs-source-dirs:  src
   default-language: Haskell2010
   default-extensions:
     ImportQualifiedPost
     OverloadedStrings
   build-depends:
-    , base >= 4.7
-    , aeson
-    , bytestring
-    , http-types
-    , text
-    , wai
+    , base       >= 4.14  && < 5
+    , aeson      >= 2.0   && < 3
+    , bytestring >= 0.10  && < 1
+    , http-types >= 0.12  && < 1
+    , text       >= 1.2   && < 3
+    , wai        >= 3.2   && < 4
 
 test-suite datastar-hs-test
   type:             exitcode-stdio-1.0
@@ -52,6 +54,7 @@ test-suite datastar-hs-test
     , hspec
     , text
     , wai
+  default-language: Haskell2010
   default-extensions:
     ImportQualifiedPost
     OverloadedStrings
